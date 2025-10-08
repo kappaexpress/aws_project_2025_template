@@ -153,5 +153,44 @@ export class AwsProject2025TemplateStack extends cdk.Stack {
       value: generateDiaryFunctionUrl.url,
       description: 'Lambda Generate Diary Content Function URL',
     });
+
+    // ========================================
+    // Lambda関数③: DynamoDBから日記一覧を取得する処理
+    // ========================================
+    const getDiaryListFunction = new lambdaPython.PythonFunction(this, 'GetDiaryListFunction', {
+      // 実行環境: Python 3.13を使用
+      runtime: lambda.Runtime.PYTHON_3_13,
+      // エントリーポイントとなるPythonファイル名
+      index: 'get_diary_list.py',
+      // Lambda関数内で呼び出される関数名
+      handler: 'handler',
+      // Lambda関数のソースコードがあるディレクトリ
+      entry: path.join(__dirname, '../lambda/get_diary_list'),
+      // 環境変数: Lambda関数内で使用できる変数を設定
+      environment: {
+        TABLE_NAME: dataTable.tableName, // DynamoDBテーブル名を渡す
+      },
+    });
+
+    // Lambda関数にDynamoDBテーブルへの読み取り権限を付与(IAMポリシー自動設定)
+    dataTable.grantReadData(getDiaryListFunction);
+
+    // Lambda関数を直接HTTPSでアクセスできるURLを作成
+    const getDiaryListFunctionUrl = getDiaryListFunction.addFunctionUrl({
+      // 認証なしでアクセス可能(本番環境では認証を推奨)
+      authType: lambda.FunctionUrlAuthType.NONE,
+      // CORS設定: ブラウザから異なるドメインのAPIを呼び出せるようにする
+      cors: {
+        allowedMethods: [lambda.HttpMethod.ALL], // すべてのHTTPメソッド(GET, POSTなど)を許可
+        allowedOrigins: ["*"], // すべてのドメインからのアクセスを許可
+        allowedHeaders: ["*"], // すべてのHTTPヘッダーを許可
+      },
+    });
+
+    // Lambda Function URLをコンソールに出力(デプロイ後に確認できる)
+    new cdk.CfnOutput(this, 'GetDiaryListFunctionUrl', {
+      value: getDiaryListFunctionUrl.url,
+      description: 'Lambda Get Diary List Function URL',
+    });
   }
 }
