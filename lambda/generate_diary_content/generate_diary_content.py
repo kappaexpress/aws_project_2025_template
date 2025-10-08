@@ -8,6 +8,8 @@ import boto3
 bedrock_runtime = boto3.client("bedrock-runtime", region_name="us-west-2")
 
 # 使用するAIモデルのID(Claude 3.5 Haiku)
+# 変更する場合は、Bedrockのコンソールで確認して更新する
+# https://us-west-2.console.aws.amazon.com/bedrock/home?region=us-west-2#/inference-profiles
 modelId = "us.anthropic.claude-3-5-haiku-20241022-v1:0"
 
 
