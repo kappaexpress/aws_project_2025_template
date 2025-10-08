@@ -5,6 +5,7 @@ import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaPython from '@aws-cdk/aws-lambda-python-alpha';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as path from 'path';
 
 export class AwsProject2025TemplateStack extends cdk.Stack {
@@ -104,6 +105,38 @@ export class AwsProject2025TemplateStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'TableName', {
       value: dataTable.tableName,
       description: 'DynamoDB Table Name',
+    });
+
+    // Lambda関数を作成（Bedrock日記生成機能）
+    const generateDiaryFunction = new lambdaPython.PythonFunction(this, 'GenerateDiaryContentFunction', {
+      runtime: lambda.Runtime.PYTHON_3_13,
+      index: 'generate_diary_content.py',
+      handler: 'handler',
+      entry: path.join(__dirname, '../lambda/generate_diary_content'),
+      timeout: cdk.Duration.seconds(600),
+    });
+
+    // Lambda関数にBedrockアクセス権限を付与
+    generateDiaryFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['bedrock:InvokeModel'],
+      resources: ['*'],
+    }));
+
+    // Lambda Function URLを作成
+    const generateDiaryFunctionUrl = generateDiaryFunction.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.NONE,
+      cors: {
+        allowedMethods: [lambda.HttpMethod.ALL],
+        allowedOrigins: ["*"],
+        allowedHeaders: ["*"],
+      },
+    });
+
+    // Lambda Function URLを出力
+    new cdk.CfnOutput(this, 'GenerateDiaryFunctionUrl', {
+      value: generateDiaryFunctionUrl.url,
+      description: 'Lambda Generate Diary Content Function URL',
     });
   }
 }
