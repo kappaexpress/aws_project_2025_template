@@ -142,13 +142,22 @@ npx cdk deploy
 - `WebsiteURL`: フロントエンドのURL
 - `SaveToDynamoDBFunctionUrl`: データ保存APIのURL
 - `GenerateDiaryFunctionUrl`: AI内容生成APIのURL
+- `GetDiaryListFunctionUrl`: 日記一覧取得APIのURL
 
-`frontend/app.js` の以下の部分を、表示されたURLに置き換えてください：
+#### Step 4-1: 日記作成ページのAPIエンドポイント設定
+`frontend/index.js` の以下の部分を、表示されたURLに置き換えてください：
 ```javascript
 const apiUrl = 'SaveToDynamoDBFunctionUrl';
 const generateApiUrl = 'GenerateDiaryFunctionUrl';
 ```
 
+#### Step 4-2: 日記一覧ページのAPIエンドポイント設定
+`frontend/diary-list.js` の以下の部分を、表示されたURLに置き換えてください：
+```javascript
+const getDiaryListApiUrl = 'GetDiaryListFunctionUrl';
+```
+
+#### Step 4-3: 変更を反映
 再度デプロイして変更を反映：
 ```bash
 npx cdk deploy
