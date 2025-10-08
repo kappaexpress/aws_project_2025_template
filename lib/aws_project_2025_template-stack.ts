@@ -34,36 +34,6 @@ export class AwsProject2025TemplateStack extends cdk.Stack {
       description: 'S3 Website URL',
     });
 
-    // S3バケット名を出力
-    new cdk.CfnOutput(this, 'BucketName', {
-      value: websiteBucket.bucketName,
-      description: 'S3 Bucket Name',
-    });
-
-    // Lambda関数を作成（Echo機能）
-    const echoFunction = new lambdaPython.PythonFunction(this, 'PythonFunctionAlpha', {
-      runtime: lambda.Runtime.PYTHON_3_13,
-      index: 'echo.py',
-      handler: 'handler',
-      entry: path.join(__dirname, '../lambda/echo'),
-    })
-
-    // Lambda Function URLを作成
-    const functionUrl = echoFunction.addFunctionUrl({
-      authType: lambda.FunctionUrlAuthType.NONE,
-      cors: {
-        allowedMethods: [lambda.HttpMethod.ALL],
-        allowedOrigins: ["*"],
-        allowedHeaders: ["*"],
-      },
-    });
-
-    // Lambda Function URLを出力
-    new cdk.CfnOutput(this, 'EchoFunctionUrl', {
-      value: functionUrl.url,
-      description: 'Lambda Echo Function URL',
-    });
-
     // DynamoDBテーブルを作成
     const dataTable = new dynamodb.Table(this, 'DataTable', {
       partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
