@@ -78,17 +78,66 @@ aws_project_2025_template/
 
 ## 🚀 使い方
 
-### 1. 依存関係のインストール
+### 0. 前提条件
+- AWS アカウントを作成済み
+- AWS CLI がインストール済み
+- Node.js がインストール済み
+
+### 1. AWS 認証情報の設定
+
+デプロイする前に、AWS の認証情報を設定する必要があります。
+
+#### Step 1-1: AWS CLI で認証情報を設定
+
+ターミナルで以下のコマンドを実行：
+
+```bash
+aws configure
+```
+
+以下の情報を順番に入力：
+
+```
+AWS Access Key ID [None]: <アクセスキーIDを入力>
+AWS Secret Access Key [None]: <シークレットアクセスキーを入力>
+Default region name [None]: ap-northeast-1
+Default output format [None]: json
+```
+
+**各項目の説明:**
+- **AWS Access Key ID**: IAM で取得したアクセスキー ID
+- **AWS Secret Access Key**: IAM で取得したシークレットアクセスキー
+- **Default region name**: 使用する AWS リージョン（東京リージョンは `ap-northeast-1`）
+- **Default output format**: 出力形式（`json` を推奨）
+
+#### Step 1-2: 認証情報の確認
+
+正しく設定できたか確認：
+
+```bash
+aws sts get-caller-identity
+```
+
+以下のような出力が表示されれば成功です：
+```json
+{
+    "UserId": "AIDAXXXXXXXXXXXXXXXXX",
+    "Account": "123456789012",
+    "Arn": "arn:aws:iam::123456789012:user/your-username"
+}
+```
+
+### 2. 依存関係のインストール
 ```bash
 npm install
 ```
 
-### 2. デプロイ（AWS にリソースを作成）
+### 3. デプロイ（AWS にリソースを作成）
 ```bash
 npx cdk deploy
 ```
 
-### 3. デプロイ後の作業
+### 4. デプロイ後の作業
 デプロイが完了すると、以下の情報が表示されます：
 - `WebsiteURL`: フロントエンドのURL
 - `SaveToDynamoDBFunctionUrl`: データ保存APIのURL
@@ -105,7 +154,7 @@ const generateApiUrl = 'GenerateDiaryFunctionUrl';
 npx cdk deploy
 ```
 
-### 4. リソースの削除
+### 5. リソースの削除
 ```bash
 npx cdk destroy
 ```
@@ -136,3 +185,11 @@ A: 1) `lambda/` に新しいフォルダを作成、2) Python コードを書く
 **Q: フロントエンドを変更するには？**
 A: `frontend/index.html` や `frontend/app.js` を編集して、`npx cdk deploy` で再デプロイ
 
+**Q: お金はかかる？**
+A: AWS の無料利用枠内であれば無料ですが、使いすぎると課金されます。不要なリソースは `npx cdk destroy` で削除しましょう。
+
+**Q: `aws configure` で設定した認証情報はどこに保存される？**
+A: `~/.aws/credentials` ファイルに保存されます。このファイルには機密情報が含まれるため、Git にコミットしないよう注意してください。
+
+**Q: 認証情報を間違えて入力してしまった場合は？**
+A: もう一度 `aws configure` を実行すれば、上書きできます。または、`~/.aws/credentials` ファイルを直接編集することもできます。
