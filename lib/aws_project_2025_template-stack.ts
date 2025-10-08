@@ -50,11 +50,6 @@ export class AwsProject2025TemplateStack extends cdk.Stack {
     // Lambda Function URLを作成
     const functionUrl = echoFunction.addFunctionUrl({
       authType: lambda.FunctionUrlAuthType.NONE,
-      cors: {
-        allowedOrigins: ['*'],
-        allowedMethods: [lambda.HttpMethod.ALL],
-        allowedHeaders: ['Content-Type'],
-      },
     });
 
     // Lambda Function URLを出力
@@ -87,11 +82,6 @@ export class AwsProject2025TemplateStack extends cdk.Stack {
     // Lambda Function URLを作成
     const saveFunctionUrl = saveToDynamoDBFunction.addFunctionUrl({
       authType: lambda.FunctionUrlAuthType.NONE,
-      cors: {
-        allowedOrigins: ['*'],
-        allowedMethods: [lambda.HttpMethod.ALL],
-        allowedHeaders: ['Content-Type'],
-      },
     });
 
     // Lambda Function URLを出力
