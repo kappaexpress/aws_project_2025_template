@@ -1,7 +1,7 @@
 // TODO: デプロイ後に実際のURLに置き換える
-const apiUrl = 'https://ux5c7tl5yuqwshn4usno6pjb4a0aazpw.lambda-url.ap-northeast-1.on.aws/';
+const apiUrl = 'SaveToDynamoDBFunctionUrl';
 // TODO: デプロイ後に実際のURLに置き換える
-const generateApiUrl = 'https://nff25zccypvvc4zhhpffh4fsjy0ztqrb.lambda-url.ap-northeast-1.on.aws/';
+const generateApiUrl = 'GenerateDiaryFunctionUrl';
 
 // AI で内容を生成ボタンのイベントリスナー
 document.getElementById('generateContentBtn').addEventListener('click', async function () {
