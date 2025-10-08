@@ -2,6 +2,10 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as lambdaPython from '@aws-cdk/aws-lambda-python-alpha';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as path from 'path';
 
 export class AwsProject2025TemplateStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -33,6 +37,73 @@ export class AwsProject2025TemplateStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'BucketName', {
       value: websiteBucket.bucketName,
       description: 'S3 Bucket Name',
+    });
+
+    // Lambda関数を作成（Echo機能）
+    const echoFunction = new lambdaPython.PythonFunction(this, 'PythonFunctionAlpha', {
+      runtime: lambda.Runtime.PYTHON_3_13,
+      index: 'echo.py',
+      handler: 'handler',
+      entry: path.join(__dirname, '../lambda/echo'),
+    })
+
+    // Lambda Function URLを作成
+    const functionUrl = echoFunction.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.NONE,
+      cors: {
+        allowedOrigins: ['*'],
+        allowedMethods: [lambda.HttpMethod.ALL],
+        allowedHeaders: ['Content-Type'],
+      },
+    });
+
+    // Lambda Function URLを出力
+    new cdk.CfnOutput(this, 'EchoFunctionUrl', {
+      value: functionUrl.url,
+      description: 'Lambda Echo Function URL',
+    });
+
+    // DynamoDBテーブルを作成
+    const dataTable = new dynamodb.Table(this, 'DataTable', {
+      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Lambda関数を作成（DynamoDB保存機能）
+    const saveToDynamoDBFunction = new lambdaPython.PythonFunction(this, 'SaveToDynamoDBFunction', {
+      runtime: lambda.Runtime.PYTHON_3_13,
+      index: 'save_to_dynamodb.py',
+      handler: 'handler',
+      entry: path.join(__dirname, '../lambda/save_to_dynamodb'),
+      environment: {
+        TABLE_NAME: dataTable.tableName,
+      },
+    });
+
+    // Lambda関数にDynamoDBテーブルへの書き込み権限を付与
+    dataTable.grantWriteData(saveToDynamoDBFunction);
+
+    // Lambda Function URLを作成
+    const saveFunctionUrl = saveToDynamoDBFunction.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.NONE,
+      cors: {
+        allowedOrigins: ['*'],
+        allowedMethods: [lambda.HttpMethod.ALL],
+        allowedHeaders: ['Content-Type'],
+      },
+    });
+
+    // Lambda Function URLを出力
+    new cdk.CfnOutput(this, 'SaveToDynamoDBFunctionUrl', {
+      value: saveFunctionUrl.url,
+      description: 'Lambda Save to DynamoDB Function URL',
+    });
+
+    // DynamoDBテーブル名を出力
+    new cdk.CfnOutput(this, 'TableName', {
+      value: dataTable.tableName,
+      description: 'DynamoDB Table Name',
     });
   }
 }
