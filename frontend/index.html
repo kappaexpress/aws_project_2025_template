@@ -28,6 +28,9 @@
                                 </div>
                                 <div class="mb-3">
                                     <label for="content" class="form-label">内容</label>
+                                    <div class="mb-2">
+                                        <button type="button" class="btn btn-secondary btn-sm" id="generateContentBtn">AI で内容を生成</button>
+                                    </div>
                                     <textarea class="form-control" id="content" rows="5" required></textarea>
                                 </div>
                                 <button type="submit" class="btn btn-primary">送信</button>
@@ -43,6 +46,55 @@
 
     <script>
         const apiUrl = 'https://b7if3hiq2wzhyvliuzedofyfni0ddkmd.lambda-url.ap-northeast-1.on.aws/';
+        // TODO: デプロイ後に実際のURLに置き換える
+        const generateApiUrl = 'YOUR_GENERATE_DIARY_FUNCTION_URL_HERE';
+
+        // AI で内容を生成ボタンのイベントリスナー
+        document.getElementById('generateContentBtn').addEventListener('click', async function () {
+            const title = document.getElementById('title').value.trim();
+
+            // タイトルが入力されているかチェック
+            if (!title) {
+                document.getElementById('result').innerHTML =
+                    '<div class="alert alert-warning">タイトルを入力してください。</div>';
+                return;
+            }
+
+            // ボタンを無効化してローディング表示
+            const btn = this;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '生成中...';
+
+            try {
+                const response = await fetch(generateApiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ title: title })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // 生成された内容をテキストエリアに設定
+                    document.getElementById('content').value = result.content;
+                    document.getElementById('result').innerHTML =
+                        '<div class="alert alert-success">内容を生成しました!</div>';
+                } else {
+                    document.getElementById('result').innerHTML =
+                        '<div class="alert alert-danger">エラー: ' + (result.error || '内容の生成に失敗しました') + '</div>';
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML =
+                    '<div class="alert alert-danger">エラー: ' + error.message + '</div>';
+            } finally {
+                // ボタンを元に戻す
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        });
 
         document.getElementById('dataForm').addEventListener('submit', async function (e) {
             e.preventDefault();
