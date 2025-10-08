@@ -4,8 +4,8 @@ import json
 import boto3
 
 # Amazon Bedrock(生成AI)を操作するクライアントを作成
-# region_name: 使用するAWSリージョン(米国東部1)
-bedrock_runtime = boto3.client("bedrock-runtime", region_name="us-east-1")
+# region_name: 使用するAWSリージョン(米国西部)
+bedrock_runtime = boto3.client("bedrock-runtime", region_name="us-west-2")
 
 # 使用するAIモデルのID(Claude 3.5 Haiku)
 modelId = "us.anthropic.claude-3-5-haiku-20241022-v1:0"
