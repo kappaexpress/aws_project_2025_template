@@ -110,6 +110,14 @@ document.getElementById('dataForm').addEventListener('submit', async function (e
         content: content
     };
 
+    // ========================================
+    // UI の更新: 送信ボタンを無効化してローディング表示
+    // ========================================
+    const submitBtn = this.querySelector('button[type="submit"]');  // 送信ボタン要素を取得
+    const originalText = submitBtn.textContent;  // ボタンの元のテキストを保存
+    submitBtn.disabled = true;  // ボタンを無効化(連続送信を防止)
+    submitBtn.textContent = '送信中...';  // ボタンのテキストを変更
+
     try {
         // ========================================
         // API 呼び出し: DynamoDBにデータを保存
@@ -152,5 +160,11 @@ document.getElementById('dataForm').addEventListener('submit', async function (e
         // ネットワークエラーやJSON解析エラーなど、予期しないエラーが発生した場合
         document.getElementById('result').innerHTML =
             '<div class="alert alert-danger">エラー: ' + error.message + '</div>';
+    } finally {
+        // try-catchの成功・失敗に関わらず必ず実行される処理
+
+        // ボタンを元の状態に戻す(再度送信可能にする)
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
     }
 });
