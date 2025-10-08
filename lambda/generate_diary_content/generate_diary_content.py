@@ -2,7 +2,7 @@ import json
 import boto3
 
 bedrock_runtime = boto3.client("bedrock-runtime", region_name="us-east-1")
-modelId = "anthropic.claude-3-5-haiku-20241022-v1:0"
+modelId = "us.anthropic.claude-3-5-haiku-20241022-v1:0"
 
 
 def handler(event, context):
@@ -19,7 +19,6 @@ def handler(event, context):
                 "statusCode": 400,
                 "headers": {
                     "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*",
                 },
                 "body": json.dumps({"error": "タイトルが必要です"}),
             }
