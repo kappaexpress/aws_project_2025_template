@@ -25,9 +25,6 @@ def handler(event, context):
                 'statusCode': 400,
                 'headers': {
                     'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Headers': 'Content-Type',
-                    'Access-Control-Allow-Methods': 'POST, OPTIONS'
                 },
                 'body': json.dumps({
                     'error': 'date, title, and content are required'
@@ -35,7 +32,7 @@ def handler(event, context):
             }
 
         # DynamoDBに保存
-        timestamp = datetime.isoformat()
+        timestamp = datetime.now().isoformat()
         item = {
             'id': f"{date}#{timestamp}",
             'date': date,
@@ -50,9 +47,6 @@ def handler(event, context):
             'statusCode': 200,
             'headers': {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Allow-Methods': 'POST, OPTIONS'
             },
             'body': json.dumps({
                 'message': 'Data saved successfully',
@@ -66,9 +60,6 @@ def handler(event, context):
             'statusCode': 500,
             'headers': {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Allow-Methods': 'POST, OPTIONS'
             },
             'body': json.dumps({
                 'error': 'Internal server error',
