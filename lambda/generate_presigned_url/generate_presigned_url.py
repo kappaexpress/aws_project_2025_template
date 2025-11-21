@@ -5,7 +5,7 @@ from datetime import datetime
 import uuid
 
 # S3クライアントを初期化
-s3_client = boto3.client('s3')
+s3_client = boto3.client('s3', region_name=os.environ.get('AWS_REGION', 'ap-northeast-1'))
 
 def handler(event, context):
     """
@@ -31,24 +31,24 @@ def handler(event, context):
         # ファイル拡張子を取得（デフォルト: jpg）
         file_extension = body.get('file_extension', 'jpg')
 
-        # Content-Typeを正規化（jpg -> jpeg）
-        content_type = 'image/jpeg' if file_extension in ['jpg', 'jpeg'] else f'image/{file_extension}'
-
         # ユニークなファイル名を生成（タイムスタンプ + UUID）
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         unique_id = str(uuid.uuid4())[:8]
         file_key = f"camera_images/{timestamp}_{unique_id}.{file_extension}"
 
         # 署名付きURLを生成（有効期限: 300秒 = 5分）
+        # ContentTypeを指定しないことで、アップロード時のヘッダー送信を不要にし、
+        # プリフライトリクエストを回避してCORSエラーを防ぐ
         presigned_url = s3_client.generate_presigned_url(
             'put_object',
             Params={
                 'Bucket': bucket_name,
                 'Key': file_key,
-                'ContentType': content_type,
             },
             ExpiresIn=300  # 5分間有効
         )
+
+        print(presigned_url)
 
         # レスポンスを返す
         return {
