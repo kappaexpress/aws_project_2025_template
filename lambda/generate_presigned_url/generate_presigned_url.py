@@ -6,9 +6,11 @@ from botocore.config import Config
 import uuid
 
 # S3クライアントを初期化
+# https://roskothecat.com/en/posts/s3-presigned-cors-error/
 s3_client = boto3.client(
     "s3",
     config=Config(
+        signature_version="s3v4",
         region_name=os.environ.get("AWS_REGION", "ap-northeast-1"),
         s3={"addressing_style": "virtual"},
     ),
