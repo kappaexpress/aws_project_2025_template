@@ -41,14 +41,43 @@ startCameraBtn.addEventListener('click', async () => {
     try {
         showStatus('カメラを起動しています...', 'info');
 
+        // MediaDevices APIの対応チェック
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            console.error('MediaDevices API非対応:', {
+                navigator: !!navigator,
+                mediaDevices: !!navigator.mediaDevices,
+                getUserMedia: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+            });
+            showStatus(
+                `❌ このブラウザはカメラAPIに対応していません\n` +
+                `Chrome、Safari、Firefox等のモダンブラウザをご利用ください。\n` +
+                `また、HTTPSでアクセスしているか確認してください。`,
+                'error'
+            );
+            return;
+        }
+
         // カメラストリームを取得（背面カメラを優先）
-        stream = await navigator.mediaDevices.getUserMedia({
+        const constraints = {
             video: {
                 facingMode: 'environment', // 背面カメラ
                 width: { ideal: 1920 },
                 height: { ideal: 1080 }
             },
             audio: false
+        };
+
+        console.log('カメラ起動リクエスト:', constraints);
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+        console.log('カメラストリーム取得成功:', {
+            tracks: stream.getTracks().map(track => ({
+                kind: track.kind,
+                label: track.label,
+                enabled: track.enabled,
+                readyState: track.readyState,
+                settings: track.getSettings()
+            }))
         });
 
         video.srcObject = stream;
@@ -58,10 +87,69 @@ startCameraBtn.addEventListener('click', async () => {
         retakeBtn.style.display = 'none';
         uploadBtn.disabled = true;
 
-        showStatus('カメラが起動しました！撮影ボタンを押してください。', 'success');
+        // ビデオのメタデータが読み込まれるのを待つ
+        video.onloadedmetadata = () => {
+            console.log('ビデオメタデータ読み込み完了:', {
+                videoWidth: video.videoWidth,
+                videoHeight: video.videoHeight,
+                duration: video.duration
+            });
+        };
+
+        showStatus('✅ カメラが起動しました！撮影ボタンを押してください。', 'success');
+
     } catch (error) {
-        console.error('カメラの起動に失敗:', error);
-        showStatus('カメラの起動に失敗しました: ' + error.message, 'error');
+        let errorMessage = '';
+        const errorDetails = {
+            name: error.name,
+            message: error.message,
+            constraint: error.constraint
+        };
+
+        console.error('カメラの起動に失敗:', errorDetails);
+
+        // エラーの種類に応じた詳細メッセージ
+        switch (error.name) {
+            case 'NotAllowedError':
+            case 'PermissionDeniedError':
+                errorMessage =
+                    `❌ カメラの使用が許可されていません\n` +
+                    `ブラウザの設定でカメラへのアクセスを許可してください。\n` +
+                    `🔒 アドレスバーのカメラアイコンをクリックして許可してください。`;
+                break;
+            case 'NotFoundError':
+            case 'DevicesNotFoundError':
+                errorMessage =
+                    `❌ カメラが見つかりません\n` +
+                    `デバイスにカメラが接続されているか確認してください。`;
+                break;
+            case 'NotReadableError':
+            case 'TrackStartError':
+                errorMessage =
+                    `❌ カメラが使用中です\n` +
+                    `他のアプリケーションがカメラを使用していないか確認してください。`;
+                break;
+            case 'OverconstrainedError':
+                errorMessage =
+                    `❌ カメラの設定が適切ではありません\n` +
+                    `制約: ${error.constraint}\n` +
+                    `カメラが要求された解像度に対応していない可能性があります。`;
+                break;
+            case 'SecurityError':
+                errorMessage =
+                    `❌ セキュリティエラー\n` +
+                    `HTTPSでアクセスしているか確認してください。\n` +
+                    `localhostまたはHTTPS接続が必要です。`;
+                break;
+            default:
+                errorMessage =
+                    `❌ カメラの起動に失敗しました\n` +
+                    `エラー: ${error.name}\n` +
+                    `詳細: ${error.message}\n` +
+                    `コンソールで詳細を確認してください。`;
+        }
+
+        showStatus(errorMessage, 'error');
     }
 });
 
@@ -217,13 +305,13 @@ retakeBtn.addEventListener('click', () => {
 // S3にアップロード
 uploadBtn.addEventListener('click', async () => {
     if (!capturedBlob) {
-        showStatus('画像が撮影されていません。', 'error');
+        showStatus('❌ 画像が撮影されていません。', 'error');
         return;
     }
 
     const apiUrl = apiUrlInput.value.trim();
     if (!apiUrl) {
-        showStatus('Lambda Function URLを入力してください。', 'error');
+        showStatus('❌ Lambda Function URLを入力してください。', 'error');
         return;
     }
 
@@ -231,27 +319,71 @@ uploadBtn.addEventListener('click', async () => {
         uploadBtn.disabled = true;
         showStatus('署名付きURLを取得しています...', 'info');
 
+        console.log('API呼び出し開始:', {
+            apiUrl: apiUrl,
+            blobSize: capturedBlob.size,
+            blobType: capturedBlob.type
+        });
+
         // 1. 署名付きURLを取得
+        const requestBody = JSON.stringify({
+            file_extension: 'jpg'
+        });
+
+        console.log('リクエストボディ:', requestBody);
+
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                file_extension: 'jpg'
-            })
+            body: requestBody
+        });
+
+        console.log('API レスポンス:', {
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries())
         });
 
         if (!response.ok) {
-            throw new Error(`API呼び出しエラー: ${response.status}`);
+            const errorText = await response.text();
+            console.error('API エラーレスポンス:', errorText);
+
+            let errorData;
+            try {
+                errorData = JSON.parse(errorText);
+            } catch {
+                errorData = { message: errorText };
+            }
+
+            throw new Error(
+                `API呼び出しエラー\n` +
+                `ステータス: ${response.status} ${response.statusText}\n` +
+                `詳細: ${errorData.message || errorText}`
+            );
         }
 
         const data = await response.json();
-        console.log('署名付きURL取得成功:', data);
+        console.log('署名付きURL取得成功:', {
+            upload_url: data.upload_url?.substring(0, 100) + '...',
+            file_key: data.file_key,
+            bucket_name: data.bucket_name
+        });
+
+        if (!data.upload_url) {
+            throw new Error('署名付きURLが返されませんでした。APIレスポンスを確認してください。');
+        }
 
         showStatus('S3に画像をアップロードしています...', 'info');
 
         // 2. 署名付きURLを使用してS3に画像をアップロード
+        console.log('S3アップロード開始:', {
+            url: data.upload_url.substring(0, 100) + '...',
+            blobSize: capturedBlob.size,
+            contentType: 'image/jpeg'
+        });
+
         const uploadResponse = await fetch(data.upload_url, {
             method: 'PUT',
             headers: {
@@ -260,13 +392,36 @@ uploadBtn.addEventListener('click', async () => {
             body: capturedBlob
         });
 
+        console.log('S3 レスポンス:', {
+            status: uploadResponse.status,
+            statusText: uploadResponse.statusText,
+            headers: Object.fromEntries(uploadResponse.headers.entries())
+        });
+
         if (!uploadResponse.ok) {
-            throw new Error(`S3アップロードエラー: ${uploadResponse.status}`);
+            const errorText = await uploadResponse.text();
+            console.error('S3 エラーレスポンス:', errorText);
+
+            throw new Error(
+                `S3アップロードエラー\n` +
+                `ステータス: ${uploadResponse.status} ${uploadResponse.statusText}\n` +
+                `詳細: ${errorText || '不明なエラー'}\n` +
+                `署名付きURLの有効期限が切れている可能性があります。`
+            );
         }
+
+        console.log('アップロード完全成功:', {
+            bucket: data.bucket_name,
+            key: data.file_key,
+            size: capturedBlob.size
+        });
 
         // 成功メッセージ
         showStatus(
-            `✅ アップロード成功！\nバケット: ${data.bucket_name}\nキー: ${data.file_key}`,
+            `✅ アップロード成功！\n` +
+            `バケット: ${data.bucket_name}\n` +
+            `キー: ${data.file_key}\n` +
+            `サイズ: ${(capturedBlob.size / 1024).toFixed(2)} KB`,
             'success'
         );
 
@@ -278,8 +433,41 @@ uploadBtn.addEventListener('click', async () => {
         capturedBlob = null;
 
     } catch (error) {
-        console.error('アップロードに失敗:', error);
-        showStatus('アップロードに失敗しました: ' + error.message, 'error');
+        const errorDetails = {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+        };
+
+        console.error('アップロードに失敗:', errorDetails);
+
+        let errorMessage = '';
+
+        // ネットワークエラーの判定
+        if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+            errorMessage =
+                `❌ ネットワークエラー\n` +
+                `API URLが正しいか確認してください。\n` +
+                `CORS設定が適切か確認してください。\n` +
+                `詳細: ${error.message}`;
+        } else if (error.message.includes('API呼び出しエラー')) {
+            errorMessage =
+                `❌ Lambda関数エラー\n` +
+                `${error.message}\n` +
+                `Lambda Function URLを確認してください。`;
+        } else if (error.message.includes('S3アップロードエラー')) {
+            errorMessage =
+                `❌ S3アップロードエラー\n` +
+                `${error.message}`;
+        } else {
+            errorMessage =
+                `❌ アップロードに失敗しました\n` +
+                `エラー: ${error.name}\n` +
+                `詳細: ${error.message}\n` +
+                `コンソールで詳細を確認してください。`;
+        }
+
+        showStatus(errorMessage, 'error');
         uploadBtn.disabled = false;
     }
 });
