@@ -42,6 +42,27 @@ export class AwsProject2025TemplateStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
+    // ========================================
+    // S3バケット: カメラ画像を保存
+    // ========================================
+    const imageBucket = new s3.Bucket(this, 'ImageBucket', {
+      // CORS設定: ブラウザから直接S3にアップロードできるようにする
+      cors: [
+        {
+          // すべてのドメインからのアクセスを許可
+          allowedOrigins: ['*'],
+          // PUT（アップロード）とPOST（マルチパートアップロード）を許可
+          allowedMethods: [s3.HttpMethods.PUT, s3.HttpMethods.POST],
+          // すべてのHTTPヘッダーを許可
+          allowedHeaders: ['*'],
+        },
+      ],
+      // スタック削除時にバケットも削除する(本番環境では RETAIN を推奨)
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      // バケット削除時に中のオブジェクトも自動削除
+      autoDeleteObjects: true,
+    });
+
     // frontendフォルダのHTMLファイルをS3バケットにデプロイ
     new s3deploy.BucketDeployment(this, 'DeployWebsite', {
       // デプロイ元: ローカルの./frontendフォルダ
@@ -191,6 +212,51 @@ export class AwsProject2025TemplateStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'GetDiaryListFunctionUrl', {
       value: getDiaryListFunctionUrl.url,
       description: 'Lambda Get Diary List Function URL',
+    });
+
+    // ========================================
+    // Lambda関数④: S3署名付きURL生成処理
+    // ========================================
+    const generatePresignedUrlFunction = new lambdaPython.PythonFunction(this, 'GeneratePresignedUrlFunction', {
+      // 実行環境: Python 3.13を使用
+      runtime: lambda.Runtime.PYTHON_3_13,
+      // エントリーポイントとなるPythonファイル名
+      index: 'generate_presigned_url.py',
+      // Lambda関数内で呼び出される関数名
+      handler: 'handler',
+      // Lambda関数のソースコードがあるディレクトリ
+      entry: path.join(__dirname, '../lambda/generate_presigned_url'),
+      // 環境変数: Lambda関数内で使用できる変数を設定
+      environment: {
+        BUCKET_NAME: imageBucket.bucketName, // 画像保存用S3バケット名を渡す
+      },
+    });
+
+    // Lambda関数にS3バケットへの書き込み権限を付与(IAMポリシー自動設定)
+    imageBucket.grantPut(generatePresignedUrlFunction);
+
+    // Lambda関数を直接HTTPSでアクセスできるURLを作成
+    const generatePresignedUrlFunctionUrl = generatePresignedUrlFunction.addFunctionUrl({
+      // 認証なしでアクセス可能(本番環境では認証を推奨)
+      authType: lambda.FunctionUrlAuthType.NONE,
+      // CORS設定: ブラウザから異なるドメインのAPIを呼び出せるようにする
+      cors: {
+        allowedMethods: [lambda.HttpMethod.ALL], // すべてのHTTPメソッド(GET, POSTなど)を許可
+        allowedOrigins: ["*"], // すべてのドメインからのアクセスを許可
+        allowedHeaders: ["*"], // すべてのHTTPヘッダーを許可
+      },
+    });
+
+    // Lambda Function URLをコンソールに出力(デプロイ後に確認できる)
+    new cdk.CfnOutput(this, 'GeneratePresignedUrlFunctionUrl', {
+      value: generatePresignedUrlFunctionUrl.url,
+      description: 'Lambda Generate Presigned URL Function URL',
+    });
+
+    // 画像保存用S3バケット名をコンソールに出力(デプロイ後に確認できる)
+    new cdk.CfnOutput(this, 'ImageBucketName', {
+      value: imageBucket.bucketName,
+      description: 'Image Storage Bucket Name',
     });
   }
 }
