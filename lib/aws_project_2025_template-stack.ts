@@ -42,31 +42,6 @@ export class AwsProject2025TemplateStack extends cdk.Stack {
     });
 
     // ========================================
-    // S3バケット: カメラ画像を保存
-    // ========================================
-    const imageBucket = new s3.Bucket(this, 'ImageBucket', {
-      // CORS設定: ブラウザから直接S3にアップロードできるようにする
-      cors: [
-        {
-          // すべてのドメインからのアクセスを許可
-          allowedOrigins: ['*'],
-          // PUT（アップロード）、POST（マルチパートアップロード）、GET（ダウンロード）を許可
-          allowedMethods: [s3.HttpMethods.PUT, s3.HttpMethods.POST, s3.HttpMethods.GET, s3.HttpMethods.HEAD],
-          // すべてのHTTPヘッダーを許可
-          allowedHeaders: ['*'],
-          // レスポンスで公開するヘッダー（ETag等）
-          exposedHeaders: ['ETag', 'x-amz-server-side-encryption', 'x-amz-request-id', 'x-amz-id-2'],
-          // プリフライトリクエストのキャッシュ時間（秒）
-          maxAge: 3000,
-        },
-      ],
-      // スタック削除時にバケットも削除する(本番環境では RETAIN を推奨)
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      // バケット削除時に中のオブジェクトも自動削除
-      autoDeleteObjects: true,
-    });
-
-    // ========================================
     // CloudFront: CDNでコンテンツを配信
     // ========================================
     // CloudFrontディストリビューションを作成
@@ -112,6 +87,29 @@ export class AwsProject2025TemplateStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'WebsiteURL', {
       value: `https://${distribution.distributionDomainName}`,
       description: 'CloudFront Distribution URL',
+    });
+
+    // ========================================
+    // S3バケット: カメラ画像を保存
+    // ========================================
+    const imageBucket = new s3.Bucket(this, 'ImageBucket', {
+      // CORS設定: ブラウザから直接S3にアップロードできるようにする
+      cors: [
+        {
+          // cloudfront経由でアクセスする場合、OriginはCloudFrontのドメインになるためワイルドカードに設定
+          allowedOrigins: ["*"],
+          // PUT（アップロード）、POST（マルチパートアップロード）
+          allowedMethods: [s3.HttpMethods.POST, s3.HttpMethods.PUT, s3.HttpMethods.GET, s3.HttpMethods.HEAD, s3.HttpMethods.DELETE],
+          // すべてのHTTPヘッダーを許可
+          allowedHeaders: ['*'],
+          // header
+          exposedHeaders: [],
+        },
+      ],
+      // スタック削除時にバケットも削除する(本番環境では RETAIN を推奨)
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      // バケット削除時に中のオブジェクトも自動削除
+      autoDeleteObjects: true,
     });
 
     // ========================================
