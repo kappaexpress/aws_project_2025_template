@@ -31,6 +31,9 @@ def handler(event, context):
         # ファイル拡張子を取得（デフォルト: jpg）
         file_extension = body.get('file_extension', 'jpg')
 
+        # Content-Typeを正規化（jpg -> jpeg）
+        content_type = 'image/jpeg' if file_extension in ['jpg', 'jpeg'] else f'image/{file_extension}'
+
         # ユニークなファイル名を生成（タイムスタンプ + UUID）
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         unique_id = str(uuid.uuid4())[:8]
@@ -42,7 +45,7 @@ def handler(event, context):
             Params={
                 'Bucket': bucket_name,
                 'Key': file_key,
-                'ContentType': f'image/{file_extension}',
+                'ContentType': content_type,
             },
             ExpiresIn=300  # 5分間有効
         )
@@ -52,9 +55,6 @@ def handler(event, context):
             'statusCode': 200,
             'headers': {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': '*',
-                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
             },
             'body': json.dumps({
                 'upload_url': presigned_url,
@@ -71,7 +71,6 @@ def handler(event, context):
             'statusCode': 500,
             'headers': {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
             },
             'body': json.dumps({
                 'error': str(e),

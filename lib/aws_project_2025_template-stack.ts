@@ -6,6 +6,10 @@ import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 // S3へのファイルデプロイ機能をインポート
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
+// CloudFront(CDN)関連の機能をインポート
+import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+// CloudFrontのオリジン設定をインポート
+import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 // Lambda関数関連の機能をインポート
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 // Python用のLambda関数を簡単に作成するためのライブラリをインポート
@@ -25,17 +29,12 @@ export class AwsProject2025TemplateStack extends cdk.Stack {
     super(scope, id, props);
 
     // ========================================
-    // S3バケット: 静的ウェブサイトをホスティング
+    // S3バケット: 静的ウェブサイトをホスティング(CloudFront経由でアクセス)
     // ========================================
     const websiteBucket = new s3.Bucket(this, 'WebsiteBucket', {
-      // ウェブサイトのトップページとして表示するファイル名
-      websiteIndexDocument: 'index.html',
-      // エラー時に表示するHTMLファイル名
-      websiteErrorDocument: 'error.html',
-      // インターネットから誰でも読み取り可能にする
-      publicReadAccess: true,
-      // ACL(アクセス制御リスト)のみブロックし、バケットポリシーは許可
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS_ONLY,
+      // CloudFront経由でのみアクセス可能にするため、パブリックアクセスをブロック
+      publicReadAccess: false,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       // スタック削除時にバケットも削除する(本番環境では RETAIN を推奨)
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       // バケット削除時に中のオブジェクトも自動削除
@@ -51,10 +50,14 @@ export class AwsProject2025TemplateStack extends cdk.Stack {
         {
           // すべてのドメインからのアクセスを許可
           allowedOrigins: ['*'],
-          // PUT（アップロード）とPOST（マルチパートアップロード）を許可
-          allowedMethods: [s3.HttpMethods.PUT, s3.HttpMethods.POST],
+          // PUT（アップロード）、POST（マルチパートアップロード）、GET（ダウンロード）を許可
+          allowedMethods: [s3.HttpMethods.PUT, s3.HttpMethods.POST, s3.HttpMethods.GET, s3.HttpMethods.HEAD],
           // すべてのHTTPヘッダーを許可
           allowedHeaders: ['*'],
+          // レスポンスで公開するヘッダー（ETag等）
+          exposedHeaders: ['ETag', 'x-amz-server-side-encryption', 'x-amz-request-id', 'x-amz-id-2'],
+          // プリフライトリクエストのキャッシュ時間（秒）
+          maxAge: 3000,
         },
       ],
       // スタック削除時にバケットも削除する(本番環境では RETAIN を推奨)
@@ -63,18 +66,52 @@ export class AwsProject2025TemplateStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
+    // ========================================
+    // CloudFront: CDNでコンテンツを配信
+    // ========================================
+    // CloudFrontディストリビューションを作成
+    const distribution = new cloudfront.Distribution(this, 'WebsiteDistribution', {
+      // デフォルトのオリジン(コンテンツ取得元)としてS3バケットを設定
+      defaultBehavior: {
+        // S3バケットをオリジンとして指定(OACを自動作成してセキュアにアクセス)
+        origin: origins.S3BucketOrigin.withOriginAccessControl(websiteBucket),
+        // 閲覧者のプロトコル: HTTPSのみまたはHTTPからHTTPSへリダイレクト
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        // キャッシュポリシー: Managed-CachingOptimizedを使用
+        cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+      },
+      // デフォルトのルートオブジェクト(トップページ)
+      defaultRootObject: 'index.html',
+      // エラーレスポンス設定: 404や403エラーをindex.htmlにリダイレクト(SPAの場合)
+      errorResponses: [
+        {
+          httpStatus: 404,
+          responseHttpStatus: 200,
+          responsePagePath: '/index.html',
+        },
+        {
+          httpStatus: 403,
+          responseHttpStatus: 200,
+          responsePagePath: '/index.html',
+        },
+      ],
+    });
+
     // frontendフォルダのHTMLファイルをS3バケットにデプロイ
     new s3deploy.BucketDeployment(this, 'DeployWebsite', {
       // デプロイ元: ローカルの./frontendフォルダ
       sources: [s3deploy.Source.asset('./frontend')],
       // デプロイ先: 上で作成したS3バケット
       destinationBucket: websiteBucket,
+      // デプロイ後にCloudFrontのキャッシュを無効化
+      distribution: distribution,
+      distributionPaths: ['/*'],
     });
 
-    // S3ウェブサイトのURLをコンソールに出力(デプロイ後に確認できる)
+    // CloudFrontディストリビューションのURLをコンソールに出力(デプロイ後に確認できる)
     new cdk.CfnOutput(this, 'WebsiteURL', {
-      value: websiteBucket.bucketWebsiteUrl,
-      description: 'S3 Website URL',
+      value: `https://${distribution.distributionDomainName}`,
+      description: 'CloudFront Distribution URL',
     });
 
     // ========================================
