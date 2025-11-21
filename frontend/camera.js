@@ -385,15 +385,16 @@ uploadBtn.addEventListener('click', async () => {
         console.log('S3アップロード開始:', {
             url: data.upload_url.substring(0, 100) + '...',
             blobSize: capturedBlob.size,
-            contentType: 'image/jpeg'
         });
 
+        // 署名付きURLにはContent-Typeが含まれているため、ヘッダーは不要
+        // ヘッダーを指定するとプリフライトリクエストが発生し、CORSエラーになる
         const uploadResponse = await fetch(data.upload_url, {
             method: 'PUT',
+            body: capturedBlob,
             headers: {
-                'Content-Type': 'image/jpeg',
-            },
-            body: capturedBlob
+                'Content-Type': capturedBlob.type
+            }
         });
 
         console.log('S3 レスポンス:', {
