@@ -9,26 +9,16 @@ const retakeBtn = document.getElementById('retake');
 const uploadBtn = document.getElementById('upload');
 const apiUrlInput = document.getElementById('apiUrl');
 const statusDiv = document.getElementById('status');
-const uploadHistory = document.getElementById('uploadHistory');
-const historyList = document.getElementById('historyList');
 
 // グローバル変数
 let stream = null;
 let capturedBlob = null;
-let uploadHistoryData = [];
 
 // ローカルストレージからAPI URLを読み込む
 window.addEventListener('DOMContentLoaded', () => {
     const savedApiUrl = localStorage.getItem('presignedUrlApiUrl');
     if (savedApiUrl) {
         apiUrlInput.value = savedApiUrl;
-    }
-
-    // アップロード履歴を読み込む
-    const savedHistory = localStorage.getItem('uploadHistory');
-    if (savedHistory) {
-        uploadHistoryData = JSON.parse(savedHistory);
-        displayUploadHistory();
     }
 });
 
@@ -430,9 +420,6 @@ uploadBtn.addEventListener('click', async () => {
             'success'
         );
 
-        // アップロード履歴に追加
-        addToHistory(data.bucket_name, data.file_key);
-
         // ボタンの状態をリセット
         uploadBtn.disabled = true;
         capturedBlob = null;
@@ -497,52 +484,6 @@ function showStatus(message, type) {
             statusDiv.classList.add('d-none');
         }, 5000);
     }
-}
-
-// アップロード履歴に追加
-function addToHistory(bucketName, fileKey) {
-    const timestamp = new Date().toLocaleString('ja-JP');
-    uploadHistoryData.unshift({
-        timestamp,
-        bucketName,
-        fileKey
-    });
-
-    // 最大10件まで保存
-    if (uploadHistoryData.length > 10) {
-        uploadHistoryData = uploadHistoryData.slice(0, 10);
-    }
-
-    // ローカルストレージに保存
-    localStorage.setItem('uploadHistory', JSON.stringify(uploadHistoryData));
-
-    // 表示を更新
-    displayUploadHistory();
-}
-
-// アップロード履歴を表示
-function displayUploadHistory() {
-    if (uploadHistoryData.length === 0) {
-        uploadHistory.style.display = 'none';
-        return;
-    }
-
-    uploadHistory.style.display = 'block';
-    historyList.innerHTML = uploadHistoryData.map(item => `
-        <div class="card history-item mb-2">
-            <div class="card-body p-3">
-                <h6 class="card-subtitle mb-2 text-primary">
-                    <i class="bi bi-clock"></i> ${item.timestamp}
-                </h6>
-                <p class="card-text mb-1">
-                    <i class="bi bi-bucket"></i> <strong>バケット:</strong> ${item.bucketName}
-                </p>
-                <p class="card-text mb-0">
-                    <i class="bi bi-file-earmark-image"></i> <strong>キー:</strong> ${item.fileKey}
-                </p>
-            </div>
-        </div>
-    `).join('');
 }
 
 // ページを離れる前にカメラを停止
