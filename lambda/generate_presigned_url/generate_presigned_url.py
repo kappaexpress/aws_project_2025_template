@@ -40,12 +40,12 @@ def handler(event, context):
         # ContentTypeを指定しないことで、アップロード時のヘッダー送信を不要にし、
         # プリフライトリクエストを回避してCORSエラーを防ぐ
         presigned_url = s3_client.generate_presigned_url(
-            'put_object',
+            ClientMethod='put_object',
             Params={
                 'Bucket': bucket_name,
                 'Key': file_key,
             },
-            ExpiresIn=300  # 5分間有効
+            ExpiresIn=3600
         )
 
         print(presigned_url)

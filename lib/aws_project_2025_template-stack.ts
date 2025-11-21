@@ -102,8 +102,6 @@ export class AwsProject2025TemplateStack extends cdk.Stack {
           allowedMethods: [s3.HttpMethods.POST, s3.HttpMethods.PUT, s3.HttpMethods.GET, s3.HttpMethods.HEAD, s3.HttpMethods.DELETE],
           // すべてのHTTPヘッダーを許可
           allowedHeaders: ['*'],
-          // header
-          exposedHeaders: [],
         },
       ],
       // スタック削除時にバケットも削除する(本番環境では RETAIN を推奨)
