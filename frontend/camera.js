@@ -2,6 +2,7 @@
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const preview = document.getElementById('preview');
+const cameraPlaceholder = document.getElementById('cameraPlaceholder');
 const startCameraBtn = document.getElementById('startCamera');
 const captureBtn = document.getElementById('capture');
 const retakeBtn = document.getElementById('retake');
@@ -81,6 +82,7 @@ startCameraBtn.addEventListener('click', async () => {
         });
 
         video.srcObject = stream;
+        cameraPlaceholder.style.display = 'none';
         video.style.display = 'block';
         preview.style.display = 'none';
         captureBtn.disabled = false;
@@ -228,6 +230,7 @@ captureBtn.addEventListener('click', () => {
             try {
                 const url = URL.createObjectURL(blob);
                 preview.src = url;
+                cameraPlaceholder.style.display = 'none';
                 preview.style.display = 'block';
                 video.style.display = 'none';
 
@@ -297,6 +300,7 @@ captureBtn.addEventListener('click', () => {
 retakeBtn.addEventListener('click', () => {
     capturedBlob = null;
     preview.style.display = 'none';
+    cameraPlaceholder.style.display = 'none';
     retakeBtn.style.display = 'none';
     uploadBtn.disabled = true;
     startCameraBtn.click(); // カメラを再起動
@@ -475,13 +479,21 @@ uploadBtn.addEventListener('click', async () => {
 // ステータス表示
 function showStatus(message, type) {
     statusDiv.textContent = message;
-    statusDiv.className = 'status ' + type;
-    statusDiv.style.display = 'block';
+
+    // Bootstrapのアラートクラスをマッピング
+    const alertTypes = {
+        'success': 'alert-success',
+        'error': 'alert-danger',
+        'info': 'alert-info'
+    };
+
+    statusDiv.className = `alert ${alertTypes[type] || 'alert-info'} status-box`;
+    statusDiv.classList.remove('d-none');
 
     // 成功メッセージは5秒後に自動で消す
     if (type === 'success') {
         setTimeout(() => {
-            statusDiv.style.display = 'none';
+            statusDiv.classList.add('d-none');
         }, 5000);
     }
 }
@@ -516,10 +528,18 @@ function displayUploadHistory() {
 
     uploadHistory.style.display = 'block';
     historyList.innerHTML = uploadHistoryData.map(item => `
-        <div class="history-item">
-            <strong>${item.timestamp}</strong><br>
-            バケット: ${item.bucketName}<br>
-            キー: ${item.fileKey}
+        <div class="card history-item mb-2">
+            <div class="card-body p-3">
+                <h6 class="card-subtitle mb-2 text-primary">
+                    <i class="bi bi-clock"></i> ${item.timestamp}
+                </h6>
+                <p class="card-text mb-1">
+                    <i class="bi bi-bucket"></i> <strong>バケット:</strong> ${item.bucketName}
+                </p>
+                <p class="card-text mb-0">
+                    <i class="bi bi-file-earmark-image"></i> <strong>キー:</strong> ${item.fileKey}
+                </p>
+            </div>
         </div>
     `).join('');
 }
