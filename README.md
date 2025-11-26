@@ -15,30 +15,43 @@ aws_project_2025_template/
 │
 ├── frontend/                         # Webアプリケーションのフロントエンド
 │   ├── index.html                    # 日記入力フォームのHTMLファイル
+│   ├── index.js                      # 日記作成ページのJavaScript（API呼び出しなど）
+│   ├── diary-list.html               # 日記一覧ページのHTMLファイル
+│   ├── diary-list.js                 # 日記一覧ページのJavaScript
+│   ├── camera.html                   # カメラ撮影ページのHTMLファイル
+│   ├── camera.js                     # カメラ撮影ページのJavaScript
+│   ├── architecture.html             # アーキテクチャ説明ページ
 │   ├── error.html                    # エラーページ
-│   ├── app.js                        # フロントエンドのJavaScript（API呼び出しなど）
 │   └── favicon.ico                   # ファビコン
 │
 ├── lambda/                           # Lambda関数のコード
-│   ├── echo/                         # サンプルのEcho関数
-│   │   ├── echo.py                   # Echoのメイン処理
-│   │   └── requirements.txt          # Python依存パッケージ
-│   │
 │   ├── save_to_dynamodb/             # DynamoDBにデータを保存する関数
 │   │   ├── save_to_dynamodb.py       # データ保存のメイン処理
 │   │   └── requirements.txt          # Python依存パッケージ
 │   │
-│   └── generate_diary_content/       # AIで日記の内容を生成する関数
-│       ├── generate_diary_content.py # Bedrockを使った内容生成処理
+│   ├── generate_diary_content/       # AIで日記の内容を生成する関数
+│   │   ├── generate_diary_content.py # Bedrockを使った内容生成処理
+│   │   └── requirements.txt          # Python依存パッケージ
+│   │
+│   ├── get_diary_list/               # 日記一覧を取得する関数
+│   │   ├── get_diary_list.py         # 日記一覧取得のメイン処理
+│   │   └── requirements.txt          # Python依存パッケージ
+│   │
+│   └── generate_presigned_url/       # S3署名付きURLを生成する関数
+│       ├── generate_presigned_url.py # 署名付きURL生成のメイン処理
 │       └── requirements.txt          # Python依存パッケージ
 │
 ├── test/                             # テストコード
 │   └── aws_project_2025_template.test.ts  # CDKスタックのテスト
 │
+├── .devcontainer/                    # 開発コンテナ設定
+│   └── devcontainer.json             # VS Code Dev Container設定ファイル
+│
 ├── .gitignore                        # Gitで追跡しないファイルを指定
 ├── .npmignore                        # npmパッケージから除外するファイルを指定
 ├── cdk.json                          # CDKの設定ファイル
 ├── package.json                      # Node.jsプロジェクトの依存関係とスクリプト
+├── package-lock.json                 # 依存関係のバージョンロックファイル
 ├── tsconfig.json                     # TypeScriptの設定ファイル
 ├── jest.config.js                    # Jestテストフレームワークの設定
 └── README.md                         # このファイル
